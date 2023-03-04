@@ -1,0 +1,591 @@
+<!DOCTYPE>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Untitled Document</title>
+</head>
+
+
+<body>
+<canvas  id="canvas"  width=600px; height=600px style="border: solid 1px #666"></canvas>
+<div id=count></div>
+<div id=count1></div>
+<div id=count2></div>
+<div id=count3></div>
+<div id=count4></div>
+<script src="vector.js"></script>
+<script>
+//onmousemove=mouseMoved(event)onmousemove=mouseMoved(event)
+var img1 = document.createElement('img');
+img1.src = "art2.jpg";//"back16.jpg";
+
+var ctx = document.getElementById('canvas').getContext('2d');
+
+var width=600;
+var height=600; 
+var Attractor = function() {
+    this.position = new Vector(width/2, height/2);
+    this.mass = 20;
+    this.G = 1;
+    this.dragOffset = new Vector(0, 0);
+    this.dragging = false;
+    this.rollover = false;
+};
+
+Attractor.prototype.calculateAttraction = function(mover) {
+
+    var force = this.position.subtract(mover.position);
+     
+    var distance = force.getMagnitude();
+                          
+   	//if(distance>55){distance=55;}
+	//else if(distance<15){distance=15;} 
+	document.getElementById('count').innerHTML=distance;   
+    force.normalize();
+
+    var strength = (this.G * this.mass * mover.mass) / (distance * distance);
+
+    force.multiplyBy(strength);
+    return force;
+};
+
+// Method to display
+Attractor.prototype.display = function() {
+this.fillColor='#ddd';
+   
+ctx.beginPath();
+
+ctx.arc(this.position.x,this.position.y,30, 0, Math.PI * 2, true);
+ctx.stroke();
+ctx.fillStyle =this.fillColor;
+ctx.fill();
+ctx.closePath();
+};
+  
+
+var Mover = function(mass, x, y) {
+    this.position = new Vector(x, y);
+    this.velocity = new Vector(1, 0);
+    this.acceleration = new Vector(0, 0);
+    this.mass = mass;
+};
+  
+Mover.prototype.applyForce = function(force) {
+    var f = force.divide(this.mass);
+    this.acceleration.addTo(f);
+};
+  
+Mover.prototype.update = function() {
+    this.velocity.addTo(this.acceleration);
+    this.position.addTo(this.velocity);
+    this.acceleration.multiplyBy(0);
+};
+
+Mover.prototype.display = function() {
+    ctx.beginPath();
+
+ctx.arc(this.position.x,this.position.y,this.mass, 0, Math.PI * 2, true);
+ctx.stroke();
+//ctx.fillStyle =this.fillColor;
+//ctx.fill();
+ctx.closePath();
+};
+
+Mover.prototype.checkEdges = function() {
+    if (this.position.x > width) {
+        //this.position.x = width;
+        this.velocity.x *= -1;
+    } else if (this.position.x < 0) {
+        this.velocity.x *= -1;
+        //this.position.x = 0;
+    }
+    if (this.position.y > height) {
+        this.velocity.y *= -1;
+        //this.position.y = height;
+    }
+	else if (this.position.y <0) {
+        this.velocity.y *= -1;
+        //this.position.y = height;
+    }
+	
+};
+
+var movers = [];
+var attractor = new Attractor();
+
+for (var i = 0; i < 50; i++) {
+    movers[i] = new Mover(Math.random()*5+3, Math.random()*width, Math.random()*height);
+}
+
+var draw = function() {
+
+    ctx.clearRect(0,0,width,height);
+
+	attractor.display();
+    for (var i = 0; i < movers.length; i++) {
+        var force = attractor.calculateAttraction(movers[i]);
+        movers[i].applyForce(force);
+
+        movers[i].update();
+        movers[i].display();
+    }
+window.requestAnimationFrame(draw);
+};
+window.requestAnimationFrame(draw);
+
+var mouseD=false;
+document.getElementById('canvas').addEventListener('mousedown',e => mouseD=true);
+document.getElementById('canvas').addEventListener('mouseup',e => mouseD=false);
+document.getElementById('canvas').addEventListener('mousemove',resetCoords);
+
+
+function resetCoords(event){
+if(!mouseD) return false;
+var x=document.getElementById('canvas').offsetLeft;
+var y=document.getElementById('canvas').offsetTop;
+x=event.clientX-x;
+y=event.clientY-y;
+attractor.position.x=x;
+attractor.position.y=y;
+
+}
+
+/*
+/////////////////////////////////////////////////////////////////////////
+var ctx = document.getElementById('canvas').getContext('2d');
+var width=600;
+var height=600; 
+var distance=0;
+var Mover = function() {
+  this.position = new Vector(Math.random()*width, Math.random()*height);
+  this.velocity = new Vector(0, 0);
+this.fillColor="rgba("+Math.random()*255+","+Math.random()*255+","+Math.random()*255+","+Math.random()+")";
+
+};
+var Mouse = new Vector(0,0);//event.clientX,event.clientY
+
+var mouseD=false;
+
+document.getElementById('canvas').addEventListener('mousedown',e => mouseD=true);
+document.getElementById('canvas').addEventListener('mouseup',e => mouseD=false);
+document.getElementById('canvas').addEventListener('mousemove', resetCoords);
+
+function resetCoords(event){
+if(!mouseD) return false;
+
+var x=document.getElementById('canvas').offsetLeft;
+var y=document.getElementById('canvas').offsetTop;
+Mouse.x=event.clientX-x;
+Mouse.y=event.clientY-y;
+document.getElementById('count').innerHTML=Mouse;
+}
+Mover.prototype.update = function() {
+this.mouse=Mouse;
+    var dir = Mouse.subtract(this.position);
+    dir.normalize();
+    dir.multiplyBy(0.015);
+	
+
+	this.acceleration = dir;
+
+	if(Math.abs(this.velocity.x)>8){this.velocity.x*=0.3;}
+	if(Math.abs(this.velocity.x)<8){this.velocity.x*=1.5;}
+	if(Math.abs(this.velocity.y)>8){this.velocity.y*=0.3;}
+	if(Math.abs(this.velocity.y)<8){this.velocity.y*=1.5;}
+	
+	//document.getElementById('count').innerHTML=Math.round(distance);
+	this.velocity.addTo(this.acceleration);
+    this.position.addTo(this.velocity);
+	document.getElementById('count').innerHTML=movers[0].velocity;
+	document.getElementById('count1').innerHTML=movers[1].velocity;
+	document.getElementById('count2').innerHTML=movers[2].velocity;
+	document.getElementById('count3').innerHTML=movers[3].velocity;
+	//}
+};
+
+Mover.prototype.display = function() {
+ctx.beginPath();
+//ctx.strokeStyle = "red";
+ctx.arc(this.position.x,this.position.y,Math.random()*6+2, 0, Math.PI * 2, true);
+//ctx.stroke();
+ctx.fillStyle = this.fillColor;
+ctx.fill();
+ctx.closePath();
+};
+
+Mover.prototype.checkEdges = function() {
+
+  if (this.position.x > width) {
+    this.position.x = 0;
+  } 
+  else if (this.position.x < 0) {
+    this.position.x = width;
+  }
+
+  if (this.position.y > height) {
+    this.position.y = 0;
+  } 
+  else if (this.position.y < 0) {
+    this.position.y = height;
+  }
+};
+
+var movers = [];
+
+for (var i = 0; i < 200; i++) {
+    movers[i] = new Mover(); 
+
+
+}
+
+draw = function() {
+ctx.clearRect(0,0,width,height);
+    for (var i = 0; i < movers.length; i++) {
+        movers[i].update();
+        movers[i].display();
+		movers[i].checkEdges();
+
+		 }
+window.requestAnimationFrame(draw);
+    }
+window.requestAnimationFrame(draw);
+
+
+
+/*
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+var ctx = document.getElementById('canvas').getContext('2d');
+var position = new Vector(Math.random()*600,Math.random()*600);
+var velocity = new Vector(2,2);
+
+var windX = new Vector(0.15, 0);
+var windY = new Vector(0, 0.15);
+var avoidObstacle = new Vector(0,0);
+
+
+var obst=[];
+var width=600;
+var height=600; 
+
+var Obstacle=function (x,y,r,c,n,_x,_y,w){
+this.x=x;
+this.y=y;
+this.radius=r;
+this.color=c;
+this.numb=n;
+this._x=_x;
+this._y=_y;
+this.w=w;
+ctx.beginPath();
+ctx.strokeStyle = (this.w=="true")?"red":"grey";
+ctx.arc(this.x,this.y,this.radius, 0, Math.PI * 2, true);
+ctx.stroke();
+ctx.font = "15px Arial";
+ctx.textAlign = "center";
+ctx.fillText(this.numb, this.x,this.y+5); 
+if(this.w=="true"){
+ctx.fillStyle = "rgba(255,0,0,0.3)";
+ctx.fill();
+ctx.closePath();
+
+}
+//arrow
+  if(this.w!="false"){
+  ctx.strokeStyle = "#ccc";
+  ctx.moveTo(this.x,this.y);
+  ctx.lineTo(this._x,this._y);
+
+  ctx.stroke();
+  ctx.closePath();
+ }
+
+}
+
+function Rocket(w){
+ ctx.beginPath();
+   ctx.strokeStyle = "black";
+   ctx.lineWidth = 1;
+   
+  ctx.moveTo(-20, 0);
+  ctx.lineTo(-20,-15);
+  ctx.lineTo(20,0);
+  ctx.lineTo(-20,15);
+  ctx.lineTo(-20,0);
+  ctx.stroke();
+  ctx.closePath();
+  //flames
+   ctx.beginPath();
+  ctx.moveTo(-20, 0);
+  ctx.lineTo(-20,-10);
+  var deviate=Math.random()*7-3;
+var end=-1*39+deviate;
+  ctx.lineTo(end,0);
+  ctx.lineTo(-20,10);
+  ctx.lineTo(-20,0);
+  ctx.fillStyle = 'red';
+  ctx.fill();
+  //arrow
+  if(w){
+  ctx.strokeStyle = "#ccc";
+  ctx.moveTo(30, 0);
+  ctx.lineTo(40,0);
+   ctx.moveTo(50, 0);
+  ctx.lineTo(60,0);
+   ctx.moveTo(70, 0);
+  ctx.lineTo(80,0);
+   ctx.moveTo(90, 0);
+  ctx.lineTo(100,0);
+   ctx.moveTo(110, 0);
+  ctx.lineTo(120,0); 
+  ctx.stroke();
+  ctx.closePath();
+  ctx.moveTo(110, -8);
+  ctx.lineTo(120,0);
+  ctx.lineTo(110,8);
+  ctx.stroke();
+  ctx.closePath();
+  
+  }
+
+}
+
+var _coords=[
+new Vector(width/2,height/2),
+new Vector(width/4,height/3),
+new Vector(width/1.5,height/1.5),
+new Vector(width/4,height/1.2),
+new Vector(width/1.2,height/4)];
+var warn=false;
+
+var mouseD=false;
+document.getElementById('canvas').addEventListener('mousedown',e => mouseD=true);
+document.getElementById('canvas').addEventListener('mouseup',e => mouseD=false);
+document.getElementById('canvas').addEventListener('mousemove',resetCoords);
+
+
+function resetCoords(event){
+if(!mouseD) return false;
+var x=document.getElementById('canvas').offsetLeft;
+var y=document.getElementById('canvas').offsetTop;
+x=event.clientX-x;
+y=event.clientY-y;
+var t=10;
+for(var f=0;f<=4;f++){
+if((_coords[f].x-10)<x && x<(_coords[f].x+10) && (_coords[f].y-10)<y && y<(_coords[f].y+10))
+{t=f;
+break;}
+else
+{t=10;}
+}
+_coords[t].x=x;
+_coords[t].y=y;
+document.getElementById('count2').innerHTML='Moved target:'+t;
+document.getElementById('count3').innerHTML=_coords;
+
+}
+
+
+
+
+var _c=100;
+var warn='false';
+
+var cl="red";
+
+var draw = function() {
+
+
+ctx.clearRect(0,0,width,height);
+ctx.save();
+
+for(var j=0;j<=4;j++){
+if (j!=_c && warn){cl="red";}else{cl="#ddd";}
+obst[j] = new Obstacle(_coords[j].x,_coords[j].y,15,cl,j,xx ,yy,warn);//obst_arrow.x,obst_arrow.y
+}
+
+
+
+	if (position.x > width-80) {
+	velocity.subtractFrom(windX);       
+    }
+	if (position.x <80) {
+	velocity.addTo(windX);        
+    }
+    
+    if ((position.x > width) || (position.x < 0)) {
+
+        velocity.x = velocity.x * -1;
+    }
+	
+if (position.y < 80) {
+	velocity.addTo(windY);         
+   }
+	
+	if (position.y >height-80) {
+	 velocity.subtractFrom(windY); 
+        
+  }	
+
+    if ((position.y > height) || (position.y < 0)) {
+        velocity.y = velocity.y * -1;
+    }
+
+
+   //ctx.beginPath();
+   //var angle = Math.atan2(velocity.y,velocity.x);
+   var normV=velocity.normalize();
+   var angle=normV.getDirection();//
+   ctx.translate(position.x, position.y);
+   ctx.rotate(angle);
+   ///rocket
+
+Rocket(0,0,0,0,warn);	
+	position.addTo(velocity);
+	ctx.restore();  
+var centers=new Vector;//[];	
+var _obst_c="red";
+	for(var i=0;i<=4;i++){
+centers=_coords[i].subtract(position);//new Vector(_coords[i].x-position.x,_coords[i].y-position.y);//
+var norm=centers.normalize();//normalizing 
+var angles=norm.getDirection();
+
+	var warnings=(Math.round(angle)==Math.round(angles))?true:false;
+	//var warnings=(angle.toFixed(1)==angles.toFixed(1))?true:false;
+
+
+	var mag=centers.getMagnitude();
+
+	if(warnings && mag<350)// && 
+	{
+	_c=i;
+	//avoidObstacle = new Vector((Math.random()*1-0.5)*(250/mag),(Math.random()*1-0.5)*(250/mag));
+	warn=true;
+	
+	avoidObstacle.x+=((Math.random()-Math.random())*(30/mag));//0.5)*;
+	avoidObstacle.y+=((Math.random()-Math.random())*(30/mag));//0.5);
+	velocity.addTo(avoidObstacle);
+var xx=(norm.x*-80)+_coords[i].x;
+var yy=(norm.y*-80)+_coords[i].y;
+
+
+_obst_c="red";
+
+///Rocket(position.x,position.y,normV.x*-80+position.x,normV.y*-80+position.y,warn);	
+obst[_c] = new Obstacle(_coords[_c].x,_coords[_c].y,15,_obst_c,_c,xx ,yy,"true");
+
+
+document.getElementById('count').innerHTML='Target:'+_c+', Distance:'+Math.round(mag);
+break;
+	}
+	else{
+	warn=false;//
+_obst_c="grey";	
+obst[i] = new Obstacle(_coords[i].x,_coords[i].y,15,_obst_c,i,0,0,"false");	
+	_c=100;
+
+avoidObstacle.x=0;
+avoidObstacle.y=0;
+document.getElementById('count').innerHTML='Target lost';
+}
+if(Math.abs(velocity.x)>=2)velocity.x/=1.01;
+if(Math.abs(velocity.y)>=2)velocity.y/=1.01;
+if(Math.abs(velocity.x)<1.8)velocity.x*=1.01;
+if(Math.abs(velocity.y)<1.8)velocity.y*=1.01;
+
+}///closes i loop
+	
+
+
+
+document.getElementById('count4').innerHTML='Current velocity: '+ velocity;	
+//document.getElementById('count').innerHTML=(warn)?"<span style='color:red;'>oooooops!</span>":"<span style='color:green;'>full ahead</span>'";		
+	
+
+
+	window.requestAnimationFrame(draw);
+	
+ //velocity.add(deviate);
+
+};
+window.requestAnimationFrame(draw);
+
+function drawLine(context, x1, y1, x2, y2) {
+//document.getElementById('count').innerHTML=x1+';'+y1;
+  context.beginPath();
+  context.strokeStyle = 'black';
+  context.lineWidth = 4;
+  context.moveTo(x1, y1);
+  context.lineTo(x2, y2);
+  context.stroke();
+  context.closePath();
+}
+////////////////////////////////////////////////////////////////////
+var isDrawing=true;
+var c=document.getElementById('canvas');
+//c.addEventListener('mousedown',e => isDrawing=true);
+//c.addEventListener('mouseup',e => isDrawing=false);
+//c.addEventListener('mousemove',mouseMoved);//hallo=()=> document.getElementById('count').innerHTML='fgh'
+
+
+
+
+function mouseMoved(event) {
+if (!isDrawing)  return false;
+ctx.clearRect(0,0,600,600);
+ctx.save();
+	var width=600;
+	var height=600; 
+    var mouse  = new Vector(event.clientX, event.clientY);
+    var center = new Vector(width/2,height/2);
+    
+   var m=mouse.subtract(center);
+   m.multiplyBy(0.5);
+
+   
+   
+//mouse.normalize();
+  ctx.translate(width/2,height/2);
+	ctx.lineWidth = 5;
+  ctx.beginPath();
+  ctx.moveTo(0,0);
+  ctx.lineTo(m.x,m.y);
+  ctx.stroke();
+	ctx.restore();
+	document.getElementById('count').innerHTML=mouse.toString();
+	
+	//window.requestAnimationFrame(mouseMoved);
+
+};
+///////////////////////
+mouseMoved1 =event => {
+if (!isDrawing)  return false;
+ctx.clearRect(0,0,600,600);
+ctx.save();
+	var width=600;
+	var height=600; 
+    var mouse  = new Vector(event.clientX, event.clientY);
+    var center = new Vector(width/2,height/2);
+    
+   var m=mouse.subtract(center);
+   m.multiplyBy(0.5);
+
+   
+   
+//mouse.normalize();
+  ctx.translate(width/2,height/2);
+	ctx.lineWidth = 5;
+  ctx.beginPath();
+  ctx.moveTo(0,0);
+  ctx.lineTo(m.x,m.y);
+  ctx.stroke();
+	ctx.restore();
+	document.getElementById('count').innerHTML=mouse.toString();
+	
+	//window.requestAnimationFrame(mouseMoved);
+
+};
+*/
+</script>
+
+</body>
+</html>
